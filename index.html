@@ -24,41 +24,60 @@
     h1, h2 { margin-bottom: 12px; }
     .menu {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      max-width: 900px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      max-width: 1050px;
       margin: 24px auto;
     }
     button {
       border: none;
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 14px 18px;
       font-size: 16px;
+      font-weight: 700;
       cursor: pointer;
-      background: #2563eb;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
       color: white;
+      box-shadow: 0 10px 22px rgba(37,99,235,0.28);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
     }
-    button:hover { opacity: 0.9; }
+    button:hover {
+      opacity: 0.96;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px rgba(37,99,235,0.34);
+    }
     .game-card {
-      background: white;
-      padding: 18px;
-      border-radius: 18px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.84);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: 0 16px 36px rgba(15,23,42,0.12);
     }
-    #gameCanvas {
-      background: white;
-      border: 4px solid #1f2937;
-      border-radius: 16px;
+    #gameCanvas, #flappyCanvas, #brickCanvas, #dartCanvas, #arenaCanvas {
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 24px;
       display: block;
       margin: 18px auto;
       max-width: 100%;
+      box-shadow: 0 20px 40px rgba(15,23,42,0.18);
+      background: transparent;
     }
     .hud {
       display: flex;
       justify-content: center;
-      gap: 24px;
+      gap: 14px;
       font-weight: bold;
       flex-wrap: wrap;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .hud > div {
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 10px 14px;
+      border-radius: 999px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.08);
     }
     .small {
       color: #4b5563;
@@ -385,28 +404,72 @@
     }
 
     function drawChicken() {
-      ctx.fillStyle = '#ffd54f';
-      ctx.fillRect(chicken.x, chicken.y, chicken.width, chicken.height);
+      const x = chicken.x;
+      const y = chicken.y;
 
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(chicken.x + 30, chicken.y + 12, 12, 10);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 6;
+
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.ellipse(x + 22, y + 24, 20, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.ellipse(x + 16, y + 18, 8, 7, -0.3, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(chicken.x + 42, chicken.y + 18, 10, 6);
+      ctx.beginPath();
+      ctx.moveTo(x + 34, y + 24);
+      ctx.lineTo(x + 48, y + 20);
+      ctx.lineTo(x + 35, y + 30);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(x + 15, y + 8, 6, 0, Math.PI * 2);
+      ctx.arc(x + 22, y + 6, 5, 0, Math.PI * 2);
+      ctx.arc(x + 28, y + 9, 4, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.fillStyle = '#111827';
-      ctx.fillRect(chicken.x + 10, chicken.y + 10, 5, 5);
+      ctx.beginPath();
+      ctx.arc(x + 27, y + 18, 2.4, 0, Math.PI * 2);
+      ctx.fill();
 
-      ctx.fillStyle = '#dc2626';
-      ctx.fillRect(chicken.x + 8, chicken.y - 6, 18, 8);
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 15, y + 41);
+      ctx.lineTo(x + 12, y + 50);
+      ctx.moveTo(x + 26, y + 41);
+      ctx.lineTo(x + 24, y + 50);
+      ctx.stroke();
+      ctx.restore();
     }
 
     function drawSpike(spike) {
-      ctx.fillStyle = '#6b7280';
+      const grad = ctx.createLinearGradient(spike.x, spike.y, spike.x, ground.y);
+      grad.addColorStop(0, '#94a3b8');
+      grad.addColorStop(1, '#475569');
+      ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(spike.x, ground.y);
       ctx.lineTo(spike.x + spike.width / 2, spike.y);
       ctx.lineTo(spike.x + spike.width, ground.y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.moveTo(spike.x + spike.width * 0.2, ground.y - 4);
+      ctx.lineTo(spike.x + spike.width / 2, spike.y + 8);
+      ctx.lineTo(spike.x + spike.width * 0.7, ground.y - 8);
       ctx.closePath();
       ctx.fill();
     }
@@ -414,15 +477,34 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#c7f9ff';
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, '#7dd3fc');
+      sky.addColorStop(1, '#e0f2fe');
+      ctx.fillStyle = sky;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#86efac';
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.arc(120, 70, 26, 0, Math.PI * 2);
+      ctx.arc(150, 72, 22, 0, Math.PI * 2);
+      ctx.arc(95, 78, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(720, 60, 24, 0, Math.PI * 2);
+      ctx.arc(748, 62, 20, 0, Math.PI * 2);
+      ctx.arc(694, 68, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      const grass = ctx.createLinearGradient(0, ground.y, 0, canvas.height);
+      grass.addColorStop(0, '#4ade80');
+      grass.addColorStop(1, '#15803d');
+      ctx.fillStyle = grass;
       ctx.fillRect(0, ground.y, canvas.width, ground.height);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '20px Arial';
-      ctx.fillText('Jump over the spikes!', 20, 30);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.font = 'bold 22px Arial';
+      ctx.fillText('Jump over the spikes!', 22, 34);
 
       drawChicken();
       spikes.forEach(drawSpike);
@@ -551,41 +633,77 @@
     }
 
     function drawFlappyChicken() {
-      fctx.fillStyle = '#ffd54f';
-      fctx.fillRect(flappyChicken.x, flappyChicken.y, flappyChicken.width, flappyChicken.height);
+      fctx.save();
+      fctx.shadowColor = 'rgba(0,0,0,0.18)';
+      fctx.shadowBlur = 12;
+      fctx.shadowOffsetY = 6;
+
+      fctx.fillStyle = '#facc15';
+      fctx.beginPath();
+      fctx.ellipse(flappyChicken.x + 21, flappyChicken.y + 21, 20, 18, 0, 0, Math.PI * 2);
+      fctx.fill();
+
+      fctx.fillStyle = '#fde68a';
+      fctx.beginPath();
+      fctx.ellipse(flappyChicken.x + 16, flappyChicken.y + 16, 7, 6, -0.3, 0, Math.PI * 2);
+      fctx.fill();
+
+      fctx.fillStyle = '#ffffff';
+      fctx.beginPath();
+      fctx.ellipse(flappyChicken.x + 15, flappyChicken.y + 22, 9, 6, -0.5, 0, Math.PI * 2);
+      fctx.fill();
 
       fctx.fillStyle = '#111827';
-      fctx.fillRect(flappyChicken.x + 10, flappyChicken.y + 10, 5, 5);
-
-      fctx.fillStyle = '#ef4444';
-      fctx.fillRect(flappyChicken.x + 6, flappyChicken.y - 6, 18, 8);
+      fctx.beginPath();
+      fctx.arc(flappyChicken.x + 17, flappyChicken.y + 21, 2.3, 0, Math.PI * 2);
+      fctx.fill();
 
       fctx.fillStyle = '#f59e0b';
-      fctx.fillRect(flappyChicken.x + 38, flappyChicken.y + 16, 10, 7);
+      fctx.beginPath();
+      fctx.moveTo(flappyChicken.x + 34, flappyChicken.y + 20);
+      fctx.lineTo(flappyChicken.x + 48, flappyChicken.y + 16);
+      fctx.lineTo(flappyChicken.x + 36, flappyChicken.y + 28);
+      fctx.closePath();
+      fctx.fill();
 
-      fctx.fillStyle = '#fbbf24';
-      fctx.fillRect(flappyChicken.x + 14, flappyChicken.y + 18, 18, 12);
+      fctx.fillStyle = '#ef4444';
+      fctx.beginPath();
+      fctx.arc(flappyChicken.x + 12, flappyChicken.y + 8, 5, 0, Math.PI * 2);
+      fctx.arc(flappyChicken.x + 19, flappyChicken.y + 6, 4, 0, Math.PI * 2);
+      fctx.arc(flappyChicken.x + 24, flappyChicken.y + 9, 3, 0, Math.PI * 2);
+      fctx.fill();
+      fctx.restore();
     }
 
     function drawPipes() {
       pipes.forEach(pipe => {
-        fctx.fillStyle = '#22c55e';
+        const grad = fctx.createLinearGradient(pipe.x, 0, pipe.x + pipe.width, 0);
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#15803d');
+        fctx.fillStyle = grad;
         fctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
         fctx.fillRect(pipe.x, pipe.bottomY, pipe.width, flappyCanvas.height - pipe.bottomY);
 
         fctx.fillStyle = '#16a34a';
-        fctx.fillRect(pipe.x - 4, pipe.topHeight - 16, pipe.width + 8, 16);
-        fctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 16);
+        fctx.fillRect(pipe.x - 6, pipe.topHeight - 18, pipe.width + 12, 18);
+        fctx.fillRect(pipe.x - 6, pipe.bottomY, pipe.width + 12, 18);
+
+        fctx.fillStyle = 'rgba(255,255,255,0.2)';
+        fctx.fillRect(pipe.x + 10, 0, 10, pipe.topHeight);
+        fctx.fillRect(pipe.x + 10, pipe.bottomY, 10, flappyCanvas.height - pipe.bottomY);
       });
     }
 
     function drawFlappy() {
       fctx.clearRect(0, 0, flappyCanvas.width, flappyCanvas.height);
 
-      fctx.fillStyle = '#93c5fd';
+      const sky = fctx.createLinearGradient(0, 0, 0, flappyCanvas.height);
+      sky.addColorStop(0, '#60a5fa');
+      sky.addColorStop(1, '#dbeafe');
+      fctx.fillStyle = sky;
       fctx.fillRect(0, 0, flappyCanvas.width, flappyCanvas.height);
 
-      fctx.fillStyle = '#ffffff';
+      fctx.fillStyle = 'rgba(255,255,255,0.88)';
       fctx.beginPath();
       fctx.arc(140, 90, 30, 0, Math.PI * 2);
       fctx.arc(175, 90, 24, 0, Math.PI * 2);
@@ -601,9 +719,9 @@
       drawPipes();
       drawFlappyChicken();
 
-      fctx.fillStyle = '#ffffff';
-      fctx.font = '20px Arial';
-      fctx.fillText('Flap through the poles!', 20, 32);
+      fctx.fillStyle = 'rgba(255,255,255,0.95)';
+      fctx.font = 'bold 22px Arial';
+      fctx.fillText('Flap through the poles!', 20, 34);
     }
 
     function flappyGameOver() {
@@ -808,33 +926,55 @@
     function drawBrickGame() {
       bctx.clearRect(0, 0, brickCanvas.width, brickCanvas.height);
 
-      bctx.fillStyle = '#0f172a';
+      const bg = bctx.createLinearGradient(0, 0, 0, brickCanvas.height);
+      bg.addColorStop(0, '#0f172a');
+      bg.addColorStop(1, '#1e293b');
+      bctx.fillStyle = bg;
       bctx.fillRect(0, 0, brickCanvas.width, brickCanvas.height);
 
-      bctx.fillStyle = '#1e293b';
+      bctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let i = 0; i < 18; i++) {
+        bctx.beginPath();
+        bctx.arc((i * 73) % brickCanvas.width, (i * 97) % brickCanvas.height, 2, 0, Math.PI * 2);
+        bctx.fill();
+      }
+
+      bctx.fillStyle = 'rgba(255,255,255,0.08)';
       bctx.fillRect(0, brickCanvas.height - 28, brickCanvas.width, 28);
 
       bricks.forEach((brick, index) => {
         if (!brick.alive) return;
         const hueBands = ['#f97316', '#fb7185', '#facc15', '#38bdf8', '#34d399'];
-        bctx.fillStyle = hueBands[index % hueBands.length];
-        bctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-        bctx.fillStyle = 'rgba(255,255,255,0.25)';
-        bctx.fillRect(brick.x, brick.y, brick.width, 6);
+        const color = hueBands[index % hueBands.length];
+        bctx.fillStyle = color;
+        bctx.beginPath();
+        bctx.roundRect(brick.x, brick.y, brick.width, brick.height, 8);
+        bctx.fill();
+        bctx.fillStyle = 'rgba(255,255,255,0.24)';
+        bctx.beginPath();
+        bctx.roundRect(brick.x + 4, brick.y + 4, brick.width - 8, 6, 4);
+        bctx.fill();
       });
 
-      bctx.fillStyle = '#e5e7eb';
-      bctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
-
+      const paddleGrad = bctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.height);
+      paddleGrad.addColorStop(0, '#f8fafc');
+      paddleGrad.addColorStop(1, '#94a3b8');
+      bctx.fillStyle = paddleGrad;
       bctx.beginPath();
-      bctx.fillStyle = '#fef08a';
+      bctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 10);
+      bctx.fill();
+
+      const ballGrad = bctx.createRadialGradient(ball.x - 3, ball.y - 3, 2, ball.x, ball.y, ball.radius);
+      ballGrad.addColorStop(0, '#fef9c3');
+      ballGrad.addColorStop(1, '#facc15');
+      bctx.beginPath();
+      bctx.fillStyle = ballGrad;
       bctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       bctx.fill();
-      bctx.closePath();
 
-      bctx.fillStyle = '#ffffff';
-      bctx.font = '20px Arial';
-      bctx.fillText('Break all the bricks!', 20, 32);
+      bctx.fillStyle = 'rgba(255,255,255,0.95)';
+      bctx.font = 'bold 22px Arial';
+      bctx.fillText('Break all the bricks!', 20, 34);
 
       if (!ball.launched && brickRunning) {
         bctx.font = '18px Arial';
@@ -959,16 +1099,36 @@
     }
 
     function drawArenaChicken() {
-      actx.fillStyle = '#ffd54f';
-      actx.fillRect(arenaChicken.x, arenaChicken.y, arenaChicken.width, arenaChicken.height);
+      actx.save();
+      actx.shadowColor = 'rgba(0,0,0,0.18)';
+      actx.shadowBlur = 12;
+      actx.shadowOffsetY = 6;
+      actx.fillStyle = '#facc15';
+      actx.beginPath();
+      actx.ellipse(arenaChicken.x + 24, arenaChicken.y + 24, 22, 18, 0, 0, Math.PI * 2);
+      actx.fill();
+      actx.fillStyle = '#fde68a';
+      actx.beginPath();
+      actx.ellipse(arenaChicken.x + 18, arenaChicken.y + 19, 8, 7, -0.3, 0, Math.PI * 2);
+      actx.fill();
       actx.fillStyle = '#111827';
-      actx.fillRect(arenaChicken.x + 10, arenaChicken.y + 10, 5, 5);
+      actx.beginPath();
+      actx.arc(arenaChicken.x + 27, arenaChicken.y + 19, 2.5, 0, Math.PI * 2);
+      actx.fill();
       actx.fillStyle = '#ef4444';
-      actx.fillRect(arenaChicken.x + 8, arenaChicken.y - 6, 18, 8);
+      actx.beginPath();
+      actx.arc(arenaChicken.x + 14, arenaChicken.y + 9, 5, 0, Math.PI * 2);
+      actx.arc(arenaChicken.x + 20, arenaChicken.y + 7, 4, 0, Math.PI * 2);
+      actx.arc(arenaChicken.x + 26, arenaChicken.y + 10, 3, 0, Math.PI * 2);
+      actx.fill();
       actx.fillStyle = '#f59e0b';
-      actx.fillRect(arenaChicken.x + 40, arenaChicken.y + 18, 10, 7);
-      actx.fillStyle = '#fbbf24';
-      actx.fillRect(arenaChicken.x + 14, arenaChicken.y + 18, 18, 12);
+      actx.beginPath();
+      actx.moveTo(arenaChicken.x + 37, arenaChicken.y + 23);
+      actx.lineTo(arenaChicken.x + 51, arenaChicken.y + 19);
+      actx.lineTo(arenaChicken.x + 38, arenaChicken.y + 30);
+      actx.closePath();
+      actx.fill();
+      actx.restore();
     }
 
     function drawArenaHazard(hazard) {
@@ -999,11 +1159,14 @@
 
     function drawArenaGame() {
       actx.clearRect(0, 0, arenaCanvas.width, arenaCanvas.height);
-      actx.fillStyle = '#bfdbfe';
+      const sky = actx.createLinearGradient(0, 0, 0, arenaCanvas.height);
+      sky.addColorStop(0, '#93c5fd');
+      sky.addColorStop(1, '#dbeafe');
+      actx.fillStyle = sky;
       actx.fillRect(0, 0, arenaCanvas.width, arenaCanvas.height);
       actx.fillStyle = '#86efac';
       actx.fillRect(0, 470, arenaCanvas.width, 50);
-      actx.fillStyle = '#ffffff';
+      actx.fillStyle = 'rgba(255,255,255,0.88)';
       actx.beginPath();
       actx.arc(150, 95, 30, 0, Math.PI * 2);
       actx.arc(185, 95, 25, 0, Math.PI * 2);
@@ -1011,9 +1174,9 @@
       actx.fill();
       arenaHazards.forEach(drawArenaHazard);
       drawArenaChicken();
-      actx.fillStyle = '#ffffff';
-      actx.font = '20px Arial';
-      actx.fillText('Dodge everything falling from the sky!', 20, 32);
+      actx.fillStyle = 'rgba(255,255,255,0.95)';
+      actx.font = 'bold 22px Arial';
+      actx.fillText('Dodge everything falling from the sky!', 20, 34);
     }
 
     function arenaGameOver() {
@@ -1189,26 +1352,54 @@
     function drawDartGame() {
       dctx.clearRect(0, 0, dartCanvas.width, dartCanvas.height);
 
-      dctx.fillStyle = '#dbeafe';
+      const sky = dctx.createLinearGradient(0, 0, 0, dartCanvas.height);
+      sky.addColorStop(0, '#93c5fd');
+      sky.addColorStop(1, '#e0f2fe');
+      dctx.fillStyle = sky;
       dctx.fillRect(0, 0, dartCanvas.width, dartCanvas.height);
 
-      dctx.fillStyle = '#16a34a';
+      dctx.fillStyle = '#22c55e';
       dctx.fillRect(0, 460, dartCanvas.width, 60);
 
       dctx.fillStyle = '#8b5a2b';
-      dctx.fillRect(target.x - 12, target.y + target.radius, 24, 150);
+      dctx.beginPath();
+      dctx.roundRect(target.x - 12, target.y + target.radius, 24, 150, 10);
+      dctx.fill();
 
-      drawDartBoard();
+      dctx.beginPath();
+      dctx.fillStyle = '#f3f4f6';
+      dctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#ef4444';
+      dctx.arc(target.x, target.y, target.radius * 0.72, 0, Math.PI * 2);
+      dctx.fill();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#f8fafc';
+      dctx.arc(target.x, target.y, target.radius * 0.42, 0, Math.PI * 2);
+      dctx.fill();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#2563eb';
+      dctx.arc(target.x, target.y, target.radius * 0.18, 0, Math.PI * 2);
+      dctx.fill();
 
       dctx.beginPath();
       dctx.fillStyle = '#f59e0b';
       dctx.arc(dartPlayer.x, dartPlayer.y, dartPlayer.radius, 0, Math.PI * 2);
       dctx.fill();
-      dctx.closePath();
 
       if (!dart.airborne) {
-        dctx.fillStyle = '#111827';
-        dctx.fillRect(dartPlayer.x - 2, dartPlayer.y - 24, 30, 4);
+        dctx.strokeStyle = '#111827';
+        dctx.lineWidth = 4;
+        dctx.lineCap = 'round';
+        dctx.beginPath();
+        dctx.moveTo(dartPlayer.x - 2, dartPlayer.y - 12);
+        dctx.lineTo(dartPlayer.x + 28, dartPlayer.y - 12);
+        dctx.stroke();
       }
 
       if (aiming && !dart.airborne) {
@@ -1226,7 +1417,9 @@
       const angle = Math.atan2(dart.vy, dart.vx || 0.001);
       dctx.rotate(angle);
       dctx.fillStyle = '#111827';
-      dctx.fillRect(-16, -2, 32, 4);
+      dctx.beginPath();
+      dctx.roundRect(-16, -2.5, 32, 5, 3);
+      dctx.fill();
       dctx.beginPath();
       dctx.fillStyle = '#6b7280';
       dctx.moveTo(16, 0);
@@ -1236,9 +1429,9 @@
       dctx.fill();
       dctx.restore();
 
-      dctx.fillStyle = '#ffffff';
-      dctx.font = '20px Arial';
-      dctx.fillText('Drag and release to throw!', 20, 32);
+      dctx.fillStyle = 'rgba(255,255,255,0.95)';
+      dctx.font = 'bold 22px Arial';
+      dctx.fillText('Drag and release to throw!', 20, 34);
     }
 
     function dartGameOver() {
