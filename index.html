@@ -64,6 +64,10 @@
   <div id="home" class="screen active">
     <h1>Five Game Arcade</h1>
     <p>Pick one of the five games below.</p>
+    <div class="hud" style="margin: 12px auto 4px; max-width: 900px; background: rgba(255,255,255,0.75); padding: 14px; border-radius: 16px;">
+      <div>Global High Score: <span id="globalHighScore">0</span></div>
+      <div>Total Arcade Points: <span id="globalTotalScore">0</span></div>
+    </div>
     <div class="menu">
       <div class="game-card">
         <h2>1. Chicken Jump</h2>
@@ -81,9 +85,9 @@
         <button onclick="openGame('brick')">Play</button>
       </div>
       <div class="game-card">
-        <h2>4. Coming Soon</h2>
-        <p>Add your fourth game here.</p>
-        <button disabled>Soon</button>
+        <h2>4. Dart Drop</h2>
+        <p>Throw a dart with real arc physics and hit the moving target rings.</p>
+        <button onclick="openGame('dart')">Play</button>
       </div>
       <div class="game-card">
         <h2>5. Coming Soon</h2>
@@ -130,6 +134,19 @@
     <button onclick="goHome()">Back to Menu</button>
   </div>
 
+  <div id="dart" class="screen">
+    <h1>Dart Drop</h1>
+    <div class="hud">
+      <div>Score: <span id="dartScore">0</span></div>
+      <div>Best: <span id="dartBest">0</span></div>
+      <div>Throws Left: <span id="dartThrows">8</span></div>
+      <div>Round: <span id="dartRound">1</span></div>
+    </div>
+    <p class="small">Hold and drag from the dart to aim. Release to throw with arc physics.</p>
+    <canvas id="dartCanvas" width="900" height="520"></canvas>
+    <button onclick="goHome()">Back to Menu</button>
+  </div>
+
   <script>
     const screens = document.querySelectorAll('.screen');
     const canvas = document.getElementById('gameCanvas');
@@ -138,6 +155,8 @@
     const fctx = flappyCanvas.getContext('2d');
     const brickCanvas = document.getElementById('brickCanvas');
     const bctx = brickCanvas.getContext('2d');
+    const dartCanvas = document.getElementById('dartCanvas');
+    const dctx = dartCanvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const bestScoreEl = document.getElementById('bestScore');
     const bestJumpsEl = document.getElementById('bestJumps');
@@ -148,10 +167,17 @@
     const brickBestEl = document.getElementById('brickBest');
     const brickWaveEl = document.getElementById('brickWave');
     const brickLivesEl = document.getElementById('brickLives');
+    const globalHighScoreEl = document.getElementById('globalHighScore');
+    const globalTotalScoreEl = document.getElementById('globalTotalScore');
+    const dartScoreEl = document.getElementById('dartScore');
+    const dartBestEl = document.getElementById('dartBest');
+    const dartThrowsEl = document.getElementById('dartThrows');
+    const dartRoundEl = document.getElementById('dartRound');
 
     let animationId;
     let flappyAnimationId;
     let brickAnimationId;
+    let dartAnimationId;
     let currentGame = 'home';
     let gameRunning = false;
     let speed = 5;
@@ -173,6 +199,25 @@
     let brickLives = 3;
     let brickBest = Number(localStorage.getItem('brickBlasterBest') || 0);
     brickBestEl.textContent = brickBest;
+
+    let dartRunning = false;
+    let dartScore = 0;
+    let dartBest = Number(localStorage.getItem('dartDropBest') || 0);
+    let dartThrowsLeft = 8;
+    let dartRound = 1;
+    dartBestEl.textContent = dartBest;
+
+    function updateGlobalScores() {
+      const scores = [bestScore, flappyBest, brickBest, dartBest];
+      const globalHigh = Math.max(...scores);
+      const globalTotal = scores.reduce((sum, value) => sum + value, 0);
+      localStorage.setItem('arcadeGlobalHigh', globalHigh);
+      localStorage.setItem('arcadeGlobalTotal', globalTotal);
+      globalHighScoreEl.textContent = globalHigh;
+      globalTotalScoreEl.textContent = globalTotal;
+    }
+
+    updateGlobalScores();
 
     const chicken = {
       x: 120,
@@ -200,6 +245,7 @@
       if (id === 'chicken') startGame();
       if (id === 'flappy') startFlappy();
       if (id === 'brick') startBrickGame();
+      if (id === 'dart') startDartGame();
     }
 
     function goHome() {
@@ -207,9 +253,11 @@
       gameRunning = false;
       flappyRunning = false;
       brickRunning = false;
+      dartRunning = false;
       cancelAnimationFrame(animationId);
       cancelAnimationFrame(flappyAnimationId);
       cancelAnimationFrame(brickAnimationId);
+      cancelAnimationFrame(dartAnimationId);
       showScreen('home');
     }
 
@@ -275,6 +323,7 @@
             bestScore = score;
             localStorage.setItem('chickenBest', bestScore);
             bestScoreEl.textContent = bestScore;
+            updateGlobalScores();
           }
         }
       });
@@ -345,6 +394,7 @@
         bestJumps = jumpCount;
         localStorage.setItem('chickenBestJumps', bestJumps);
         bestJumpsEl.textContent = bestJumps;
+        updateGlobalScores();
       }
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -436,6 +486,7 @@
             flappyBest = flappyScore;
             localStorage.setItem('flappyChickenBest', flappyBest);
             flappyBestEl.textContent = flappyBest;
+            updateGlobalScores();
           }
         }
       });
@@ -628,6 +679,7 @@
         brickBest = brickScore;
         localStorage.setItem('brickBlasterBest', brickBest);
         brickBestEl.textContent = brickBest;
+        updateGlobalScores();
       }
       brickScoreEl.textContent = brickScore;
       buildBrickWave();
@@ -683,6 +735,7 @@
             brickBest = brickScore;
             localStorage.setItem('brickBlasterBest', brickBest);
             brickBestEl.textContent = brickBest;
+            updateGlobalScores();
           }
 
           const overlapLeft = Math.abs((ball.x + ball.radius) - brick.x);
@@ -766,12 +819,237 @@
       brickAnimationId = requestAnimationFrame(brickLoop);
     }
 
+    const dartPlayer = {
+      x: 120,
+      y: 410,
+      radius: 14
+    };
+
+    const dart = {
+      x: 120,
+      y: 410,
+      vx: 0,
+      vy: 0,
+      gravity: 0.22,
+      airborne: false,
+      stuck: false,
+      hitThisThrow: false
+    };
+
+    let target = { x: 690, y: 210, radius: 62, vy: 1.3, direction: 1 };
+    let aiming = false;
+    let aimPoint = { x: 120, y: 410 };
+
+    function resetDartPosition() {
+      dart.x = dartPlayer.x;
+      dart.y = dartPlayer.y;
+      dart.vx = 0;
+      dart.vy = 0;
+      dart.airborne = false;
+      dart.stuck = false;
+      dart.hitThisThrow = false;
+    }
+
+    function resetDartHud() {
+      dartScoreEl.textContent = dartScore;
+      dartBestEl.textContent = dartBest;
+      dartThrowsEl.textContent = dartThrowsLeft;
+      dartRoundEl.textContent = dartRound;
+    }
+
+    function startDartGame() {
+      dartScore = 0;
+      dartThrowsLeft = 8;
+      dartRound = 1;
+      target = { x: 690, y: 210, radius: 62, vy: 1.3, direction: 1 };
+      resetDartPosition();
+      resetDartHud();
+      dartRunning = true;
+      dartLoop();
+    }
+
+    function nextDartRound() {
+      dartRound++;
+      dartThrowsLeft = 8;
+      target.radius = Math.max(30, target.radius - 5);
+      target.vy += 0.25;
+      resetDartPosition();
+      resetDartHud();
+    }
+
+    function throwDartTo(pointX, pointY) {
+      if (currentGame !== 'dart' || !dartRunning || dart.airborne) return;
+      const dx = dartPlayer.x - pointX;
+      const dy = dartPlayer.y - pointY;
+      dart.vx = Math.max(4, Math.min(14, dx * 0.09));
+      dart.vy = Math.max(-14, Math.min(-4, dy * 0.09));
+      dart.airborne = true;
+      dart.stuck = false;
+      dart.hitThisThrow = false;
+      aiming = false;
+      dartThrowsLeft--;
+      dartThrowsEl.textContent = dartThrowsLeft;
+    }
+
+    function scoreDartHit(distance) {
+      let points = 15;
+      if (distance < target.radius * 0.7) points = 35;
+      if (distance < target.radius * 0.42) points = 60;
+      if (distance < target.radius * 0.18) points = 100;
+      dartScore += points;
+      if (dartScore > dartBest) {
+        dartBest = dartScore;
+        localStorage.setItem('dartDropBest', dartBest);
+        dartBestEl.textContent = dartBest;
+        updateGlobalScores();
+      }
+      dartScoreEl.textContent = dartScore;
+    }
+
+    function updateDartGame() {
+      target.y += target.vy * target.direction;
+      if (target.y > 360 || target.y < 105) {
+        target.direction *= -1;
+      }
+
+      if (dart.airborne) {
+        dart.vy += dart.gravity;
+        dart.x += dart.vx;
+        dart.y += dart.vy;
+
+        const dx = dart.x - target.x;
+        const dy = dart.y - target.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (!dart.hitThisThrow && distance <= target.radius) {
+          dart.hitThisThrow = true;
+          dart.stuck = true;
+          dart.airborne = false;
+          scoreDartHit(distance);
+          setTimeout(() => {
+            if (currentGame === 'dart' && dartRunning) resetDartPosition();
+          }, 350);
+        }
+
+        if (dart.x > dartCanvas.width || dart.y > dartCanvas.height || dart.y < 0) {
+          resetDartPosition();
+        }
+      }
+
+      if (dartThrowsLeft <= 0 && !dart.airborne && !dart.stuck) {
+        nextDartRound();
+      }
+    }
+
+    function drawDartBoard() {
+      dctx.beginPath();
+      dctx.fillStyle = '#f3f4f6';
+      dctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#ef4444';
+      dctx.arc(target.x, target.y, target.radius * 0.72, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#f8fafc';
+      dctx.arc(target.x, target.y, target.radius * 0.42, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#2563eb';
+      dctx.arc(target.x, target.y, target.radius * 0.18, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+    }
+
+    function drawDartGame() {
+      dctx.clearRect(0, 0, dartCanvas.width, dartCanvas.height);
+
+      dctx.fillStyle = '#dbeafe';
+      dctx.fillRect(0, 0, dartCanvas.width, dartCanvas.height);
+
+      dctx.fillStyle = '#16a34a';
+      dctx.fillRect(0, 460, dartCanvas.width, 60);
+
+      dctx.fillStyle = '#8b5a2b';
+      dctx.fillRect(target.x - 12, target.y + target.radius, 24, 150);
+
+      drawDartBoard();
+
+      dctx.beginPath();
+      dctx.fillStyle = '#f59e0b';
+      dctx.arc(dartPlayer.x, dartPlayer.y, dartPlayer.radius, 0, Math.PI * 2);
+      dctx.fill();
+      dctx.closePath();
+
+      if (!dart.airborne) {
+        dctx.fillStyle = '#111827';
+        dctx.fillRect(dartPlayer.x - 2, dartPlayer.y - 24, 30, 4);
+      }
+
+      if (aiming && !dart.airborne) {
+        dctx.strokeStyle = 'rgba(17,24,39,0.5)';
+        dctx.setLineDash([8, 8]);
+        dctx.beginPath();
+        dctx.moveTo(dartPlayer.x, dartPlayer.y);
+        dctx.lineTo(aimPoint.x, aimPoint.y);
+        dctx.stroke();
+        dctx.setLineDash([]);
+      }
+
+      dctx.save();
+      dctx.translate(dart.x, dart.y);
+      const angle = Math.atan2(dart.vy, dart.vx || 0.001);
+      dctx.rotate(angle);
+      dctx.fillStyle = '#111827';
+      dctx.fillRect(-16, -2, 32, 4);
+      dctx.beginPath();
+      dctx.fillStyle = '#6b7280';
+      dctx.moveTo(16, 0);
+      dctx.lineTo(24, -4);
+      dctx.lineTo(24, 4);
+      dctx.closePath();
+      dctx.fill();
+      dctx.restore();
+
+      dctx.fillStyle = '#ffffff';
+      dctx.font = '20px Arial';
+      dctx.fillText('Drag and release to throw!', 20, 32);
+    }
+
+    function dartGameOver() {
+      dartRunning = false;
+      cancelAnimationFrame(dartAnimationId);
+      drawDartGame();
+      dctx.fillStyle = 'rgba(0,0,0,0.45)';
+      dctx.fillRect(0, 0, dartCanvas.width, dartCanvas.height);
+      dctx.fillStyle = '#ffffff';
+      dctx.font = '40px Arial';
+      dctx.fillText('Round Over', dartCanvas.width / 2 - 110, 200);
+      dctx.font = '24px Arial';
+      dctx.fillText('Score: ' + dartScore, dartCanvas.width / 2 - 48, 245);
+      dctx.fillText('Click, tap, or press Space to restart', dartCanvas.width / 2 - 185, 290);
+    }
+
+    function dartLoop() {
+      if (!dartRunning) return;
+      updateDartGame();
+      drawDartGame();
+      dartAnimationId = requestAnimationFrame(dartLoop);
+    }
+
     window.addEventListener('keydown', e => {
       if (e.code === 'Space') {
         e.preventDefault();
         if (currentGame === 'chicken') jump();
         if (currentGame === 'flappy') flap();
         if (currentGame === 'brick') launchBrickBall();
+        if (currentGame === 'dart' && !dartRunning) startDartGame();
       }
     });
 
@@ -808,6 +1086,49 @@
     brickCanvas.addEventListener('touchstart', e => {
       e.preventDefault();
       launchBrickBall();
+    }, { passive: false });
+
+    function getDartPoint(event, touch = false) {
+      const rect = dartCanvas.getBoundingClientRect();
+      const clientX = touch ? event.touches[0].clientX : event.clientX;
+      const clientY = touch ? event.touches[0].clientY : event.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    dartCanvas.addEventListener('mousedown', e => {
+      if (currentGame !== 'dart' || dart.airborne) return;
+      aiming = true;
+      aimPoint = getDartPoint(e);
+    });
+
+    dartCanvas.addEventListener('mousemove', e => {
+      if (currentGame !== 'dart' || !aiming) return;
+      aimPoint = getDartPoint(e);
+    });
+
+    window.addEventListener('mouseup', e => {
+      if (currentGame !== 'dart' || !aiming) return;
+      const point = getDartPoint(e);
+      throwDartTo(point.x, point.y);
+    });
+
+    dartCanvas.addEventListener('touchstart', e => {
+      if (currentGame !== 'dart' || dart.airborne) return;
+      e.preventDefault();
+      aiming = true;
+      aimPoint = getDartPoint(e, true);
+    }, { passive: false });
+
+    dartCanvas.addEventListener('touchmove', e => {
+      if (currentGame !== 'dart' || !aiming) return;
+      e.preventDefault();
+      aimPoint = getDartPoint(e, true);
+    }, { passive: false });
+
+    dartCanvas.addEventListener('touchend', e => {
+      if (currentGame !== 'dart' || !aiming) return;
+      e.preventDefault();
+      throwDartTo(aimPoint.x, aimPoint.y);
     }, { passive: false });
   </script>
 </body>
