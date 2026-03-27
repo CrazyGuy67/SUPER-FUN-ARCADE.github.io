@@ -71,9 +71,9 @@
         <button onclick="openGame('chicken')">Play</button>
       </div>
       <div class="game-card">
-        <h2>2. Coming Soon</h2>
-        <p>Add your next game idea here.</p>
-        <button disabled>Soon</button>
+        <h2>2. Flappy Chicken</h2>
+        <p>Click to flap through the pipe poles without crashing.</p>
+        <button onclick="openGame('flappy')">Play</button>
       </div>
       <div class="game-card">
         <h2>3. Coming Soon</h2>
@@ -106,16 +106,33 @@
     <button onclick="goHome()">Back to Menu</button>
   </div>
 
+  <div id="flappy" class="screen">
+    <h1>Flappy Chicken</h1>
+    <div class="hud">
+      <div>Score: <span id="flappyScore">0</span></div>
+      <div>Best: <span id="flappyBest">0</span></div>
+    </div>
+    <p class="small">Click, tap, or press Space to flap up.</p>
+    <canvas id="flappyCanvas" width="900" height="500"></canvas>
+    <button onclick="goHome()">Back to Menu</button>
+  </div>
+
   <script>
     const screens = document.querySelectorAll('.screen');
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const flappyCanvas = document.getElementById('flappyCanvas');
+    const fctx = flappyCanvas.getContext('2d');
     const scoreEl = document.getElementById('score');
     const bestScoreEl = document.getElementById('bestScore');
     const bestJumpsEl = document.getElementById('bestJumps');
     const jumpCountEl = document.getElementById('jumpCount');
+    const flappyScoreEl = document.getElementById('flappyScore');
+    const flappyBestEl = document.getElementById('flappyBest');
 
     let animationId;
+    let flappyAnimationId;
+    let currentGame = 'home';
     let gameRunning = false;
     let speed = 5;
     let score = 0;
@@ -124,6 +141,11 @@
     let bestJumps = Number(localStorage.getItem('chickenBestJumps') || 0);
     bestScoreEl.textContent = bestScore;
     bestJumpsEl.textContent = bestJumps;
+
+    let flappyRunning = false;
+    let flappyScore = 0;
+    let flappyBest = Number(localStorage.getItem('flappyChickenBest') || 0);
+    flappyBestEl.textContent = flappyBest;
 
     const chicken = {
       x: 120,
@@ -146,13 +168,18 @@
     }
 
     function openGame(id) {
+      currentGame = id;
       showScreen(id);
       if (id === 'chicken') startGame();
+      if (id === 'flappy') startFlappy();
     }
 
     function goHome() {
+      currentGame = 'home';
       gameRunning = false;
+      flappyRunning = false;
       cancelAnimationFrame(animationId);
+      cancelAnimationFrame(flappyAnimationId);
       showScreen('home');
     }
 
@@ -308,17 +335,194 @@
       animationId = requestAnimationFrame(loop);
     }
 
+    const flappyChicken = {
+      x: 170,
+      y: 220,
+      width: 42,
+      height: 42,
+      velocityY: 0,
+      gravity: 0.5,
+      flap: -8.5
+    };
+
+    let pipes = [];
+    let flappyFrame = 0;
+    let flappySpeed = 3.5;
+    const pipeGap = 145;
+
+    function resetFlappy() {
+      flappyScore = 0;
+      flappyFrame = 0;
+      flappySpeed = 3.5;
+      pipes = [];
+      flappyChicken.y = 220;
+      flappyChicken.velocityY = 0;
+      flappyScoreEl.textContent = flappyScore;
+    }
+
+    function startFlappy() {
+      resetFlappy();
+      flappyRunning = true;
+      flappyLoop();
+    }
+
+    function flap() {
+      if (currentGame !== 'flappy') return;
+      if (!flappyRunning) {
+        startFlappy();
+        return;
+      }
+      flappyChicken.velocityY = flappyChicken.flap;
+    }
+
+    function addPipe() {
+      const minTop = 60;
+      const maxTop = flappyCanvas.height - 60 - pipeGap;
+      const topHeight = Math.random() * (maxTop - minTop) + minTop;
+      pipes.push({
+        x: flappyCanvas.width + 40,
+        width: 70,
+        topHeight,
+        bottomY: topHeight + pipeGap,
+        counted: false
+      });
+    }
+
+    function updateFlappy() {
+      flappyFrame++;
+      if (flappyFrame % 110 === 0) addPipe();
+      if (flappyFrame % 800 === 0) flappySpeed += 0.2;
+
+      flappyChicken.velocityY += flappyChicken.gravity;
+      flappyChicken.y += flappyChicken.velocityY;
+
+      pipes.forEach(pipe => {
+        pipe.x -= flappySpeed;
+        if (!pipe.counted && pipe.x + pipe.width < flappyChicken.x) {
+          pipe.counted = true;
+          flappyScore++;
+          flappyScoreEl.textContent = flappyScore;
+          if (flappyScore > flappyBest) {
+            flappyBest = flappyScore;
+            localStorage.setItem('flappyChickenBest', flappyBest);
+            flappyBestEl.textContent = flappyBest;
+          }
+        }
+      });
+
+      pipes = pipes.filter(pipe => pipe.x + pipe.width > -20);
+
+      if (flappyChicken.y < 0 || flappyChicken.y + flappyChicken.height > flappyCanvas.height) {
+        flappyGameOver();
+      }
+
+      for (const pipe of pipes) {
+        const hitsPipeHorizontally = flappyChicken.x + flappyChicken.width > pipe.x && flappyChicken.x < pipe.x + pipe.width;
+        const hitsTopPipe = flappyChicken.y < pipe.topHeight;
+        const hitsBottomPipe = flappyChicken.y + flappyChicken.height > pipe.bottomY;
+        if (hitsPipeHorizontally && (hitsTopPipe || hitsBottomPipe)) {
+          flappyGameOver();
+        }
+      }
+    }
+
+    function drawFlappyChicken() {
+      fctx.fillStyle = '#ffd54f';
+      fctx.fillRect(flappyChicken.x, flappyChicken.y, flappyChicken.width, flappyChicken.height);
+
+      fctx.fillStyle = '#111827';
+      fctx.fillRect(flappyChicken.x + 10, flappyChicken.y + 10, 5, 5);
+
+      fctx.fillStyle = '#ef4444';
+      fctx.fillRect(flappyChicken.x + 6, flappyChicken.y - 6, 18, 8);
+
+      fctx.fillStyle = '#f59e0b';
+      fctx.fillRect(flappyChicken.x + 38, flappyChicken.y + 16, 10, 7);
+
+      fctx.fillStyle = '#fbbf24';
+      fctx.fillRect(flappyChicken.x + 14, flappyChicken.y + 18, 18, 12);
+    }
+
+    function drawPipes() {
+      pipes.forEach(pipe => {
+        fctx.fillStyle = '#22c55e';
+        fctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
+        fctx.fillRect(pipe.x, pipe.bottomY, pipe.width, flappyCanvas.height - pipe.bottomY);
+
+        fctx.fillStyle = '#16a34a';
+        fctx.fillRect(pipe.x - 4, pipe.topHeight - 16, pipe.width + 8, 16);
+        fctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 16);
+      });
+    }
+
+    function drawFlappy() {
+      fctx.clearRect(0, 0, flappyCanvas.width, flappyCanvas.height);
+
+      fctx.fillStyle = '#93c5fd';
+      fctx.fillRect(0, 0, flappyCanvas.width, flappyCanvas.height);
+
+      fctx.fillStyle = '#ffffff';
+      fctx.beginPath();
+      fctx.arc(140, 90, 30, 0, Math.PI * 2);
+      fctx.arc(175, 90, 24, 0, Math.PI * 2);
+      fctx.arc(110, 98, 22, 0, Math.PI * 2);
+      fctx.fill();
+
+      fctx.beginPath();
+      fctx.arc(590, 120, 28, 0, Math.PI * 2);
+      fctx.arc(625, 120, 23, 0, Math.PI * 2);
+      fctx.arc(560, 130, 20, 0, Math.PI * 2);
+      fctx.fill();
+
+      drawPipes();
+      drawFlappyChicken();
+
+      fctx.fillStyle = '#ffffff';
+      fctx.font = '20px Arial';
+      fctx.fillText('Flap through the poles!', 20, 32);
+    }
+
+    function flappyGameOver() {
+      flappyRunning = false;
+      cancelAnimationFrame(flappyAnimationId);
+      drawFlappy();
+      fctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      fctx.fillRect(0, 0, flappyCanvas.width, flappyCanvas.height);
+      fctx.fillStyle = '#ffffff';
+      fctx.font = '40px Arial';
+      fctx.fillText('Game Over', flappyCanvas.width / 2 - 110, 180);
+      fctx.font = '24px Arial';
+      fctx.fillText('Score: ' + flappyScore, flappyCanvas.width / 2 - 48, 225);
+      fctx.fillText('Click, tap, or press Space to respawn', flappyCanvas.width / 2 - 195, 270);
+    }
+
+    function flappyLoop() {
+      if (!flappyRunning) return;
+      updateFlappy();
+      drawFlappy();
+      flappyAnimationId = requestAnimationFrame(flappyLoop);
+    }
+
     window.addEventListener('keydown', e => {
       if (e.code === 'Space') {
         e.preventDefault();
-        jump();
+        if (currentGame === 'chicken') jump();
+        if (currentGame === 'flappy') flap();
       }
     });
 
-    canvas.addEventListener('click', jump);
+    canvas.addEventListener('click', () => {
+      if (currentGame === 'chicken') jump();
+    });
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
-      jump();
+      if (currentGame === 'chicken') jump();
+    }, { passive: false });
+
+    flappyCanvas.addEventListener('click', flap);
+    flappyCanvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      flap();
     }, { passive: false });
   </script>
 </body>
