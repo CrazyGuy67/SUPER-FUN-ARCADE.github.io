@@ -12,8 +12,14 @@
       background: linear-gradient(180deg, #87ceeb 0%, #dff6ff 100%);
       color: #1f2937;
       text-align: center;
+      overflow-x: hidden;
     }
-    .screen { display: none; padding: 24px; }
+    .screen {
+      display: none;
+      padding: 24px;
+      min-height: 100vh;
+      width: 100%;
+    }
     .screen.active { display: block; }
     h1, h2 { margin-bottom: 12px; }
     .menu {
@@ -64,6 +70,13 @@
   <div id="home" class="screen active">
     <h1>Five Game Arcade</h1>
     <p>Pick one of the five games below.</p>
+    <div class="hud" style="margin: 12px auto 4px; max-width: 900px; background: rgba(255,255,255,0.75); padding: 14px; border-radius: 16px;">
+      <div>Chicken Jump Record: <span id="menuChickenBest">0</span></div>
+      <div>Flappy Chicken Record: <span id="menuFlappyBest">0</span></div>
+      <div>Brick Blaster Record: <span id="menuBrickBest">0</span></div>
+      <div>Dart Drop Record: <span id="menuDartBest">0</span></div>
+      <div>Chicken Dodge Arena Record: <span id="menuArenaBest">0</span></div>
+    </div>
       <div>Total Arcade Points: <span id="globalTotalScore">0</span></div>
     </div>
     <div class="menu">
@@ -188,6 +201,11 @@
     const arenaScoreEl = document.getElementById('arenaScore');
     const arenaBestEl = document.getElementById('arenaBest');
     const arenaLivesEl = document.getElementById('arenaLives');
+    const menuChickenBestEl = document.getElementById('menuChickenBest');
+    const menuFlappyBestEl = document.getElementById('menuFlappyBest');
+    const menuBrickBestEl = document.getElementById('menuBrickBest');
+    const menuDartBestEl = document.getElementById('menuDartBest');
+    const menuArenaBestEl = document.getElementById('menuArenaBest');
 
     let animationId;
     let flappyAnimationId;
@@ -229,6 +247,16 @@
     let arenaBest = Number(localStorage.getItem('chickenArenaBest') || 0);
     arenaBestEl.textContent = arenaBest;
 
+    function refreshMenuRecords() {
+      menuChickenBestEl.textContent = bestScore;
+      menuFlappyBestEl.textContent = flappyBest;
+      menuBrickBestEl.textContent = brickBest;
+      menuDartBestEl.textContent = dartBest;
+      menuArenaBestEl.textContent = arenaBest;
+    }
+
+    refreshMenuRecords();
+
     const chicken = {
       x: 120,
       y: 210,
@@ -247,6 +275,7 @@
     function showScreen(id) {
       screens.forEach(screen => screen.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     }
 
     function openGame(id) {
@@ -336,6 +365,7 @@
             bestScore = score;
             localStorage.setItem('chickenBest', bestScore);
             bestScoreEl.textContent = bestScore;
+            refreshMenuRecords();
           }
         }
       });
@@ -498,6 +528,7 @@
             flappyBest = flappyScore;
             localStorage.setItem('flappyChickenBest', flappyBest);
             flappyBestEl.textContent = flappyBest;
+            refreshMenuRecords();
             updateGlobalScores();
           }
         }
@@ -691,6 +722,7 @@
         brickBest = brickScore;
         localStorage.setItem('brickBlasterBest', brickBest);
         brickBestEl.textContent = brickBest;
+        refreshMenuRecords();
         updateGlobalScores();
       }
       brickScoreEl.textContent = brickScore;
@@ -747,6 +779,7 @@
             brickBest = brickScore;
             localStorage.setItem('brickBlasterBest', brickBest);
             brickBestEl.textContent = brickBest;
+            refreshMenuRecords();
             updateGlobalScores();
           }
 
@@ -910,6 +943,7 @@
             arenaBest = arenaScore;
             localStorage.setItem('chickenArenaBest', arenaBest);
             arenaBestEl.textContent = arenaBest;
+            refreshMenuRecords();
           }
         }
       });
@@ -1085,6 +1119,7 @@
         dartBest = dartScore;
         localStorage.setItem('dartDropBest', dartBest);
         dartBestEl.textContent = dartBest;
+        refreshMenuRecords();
         updateGlobalScores();
       }
       dartScoreEl.textContent = dartScore;
