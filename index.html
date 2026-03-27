@@ -1,18 +1,325 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>My First Website</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Five Game Arcade</title>
   <style>
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #87ceeb 0%, #dff6ff 100%);
+      color: #1f2937;
       text-align: center;
-      margin-top: 60px;
+    }
+    .screen { display: none; padding: 24px; }
+    .screen.active { display: block; }
+    h1, h2 { margin-bottom: 12px; }
+    .menu {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      max-width: 900px;
+      margin: 24px auto;
+    }
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+    button:hover { opacity: 0.9; }
+    .game-card {
+      background: white;
+      padding: 18px;
+      border-radius: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    #gameCanvas {
+      background: white;
+      border: 4px solid #1f2937;
+      border-radius: 16px;
+      display: block;
+      margin: 18px auto;
+      max-width: 100%;
+    }
+    .hud {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      font-weight: bold;
+      flex-wrap: wrap;
+    }
+    .small {
+      color: #4b5563;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <p>This is my first website on GitHub.</p>
+  <div id="home" class="screen active">
+    <h1>Five Game Arcade</h1>
+    <p>Pick one of the five games below.</p>
+    <div class="menu">
+      <div class="game-card">
+        <h2>1. Chicken Jump</h2>
+        <p>You are a chicken. The game moves by itself, and you jump over spikes.</p>
+        <button onclick="openGame('chicken')">Play</button>
+      </div>
+      <div class="game-card">
+        <h2>2. Coming Soon</h2>
+        <p>Add your next game idea here.</p>
+        <button disabled>Soon</button>
+      </div>
+      <div class="game-card">
+        <h2>3. Coming Soon</h2>
+        <p>Add your third game here.</p>
+        <button disabled>Soon</button>
+      </div>
+      <div class="game-card">
+        <h2>4. Coming Soon</h2>
+        <p>Add your fourth game here.</p>
+        <button disabled>Soon</button>
+      </div>
+      <div class="game-card">
+        <h2>5. Coming Soon</h2>
+        <p>Add your fifth game here.</p>
+        <button disabled>Soon</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="chicken" class="screen">
+    <h1>Chicken Jump</h1>
+    <div class="hud">
+      <div>Score: <span id="score">0</span></div>
+      <div>Best Score: <span id="bestScore">0</span></div>
+      <div>Best Jumps Survived: <span id="bestJumps">0</span></div>
+      <div>Jumps This Round: <span id="jumpCount">0</span></div>
+    </div>
+    <p class="small">Press Space, click, or tap to jump.</p>
+    <canvas id="gameCanvas" width="900" height="300"></canvas>
+    <button onclick="goHome()">Back to Menu</button>
+  </div>
+
+  <script>
+    const screens = document.querySelectorAll('.screen');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const bestScoreEl = document.getElementById('bestScore');
+    const bestJumpsEl = document.getElementById('bestJumps');
+    const jumpCountEl = document.getElementById('jumpCount');
+
+    let animationId;
+    let gameRunning = false;
+    let speed = 5;
+    let score = 0;
+    let jumpCount = 0;
+    let bestScore = Number(localStorage.getItem('chickenBest') || 0);
+    let bestJumps = Number(localStorage.getItem('chickenBestJumps') || 0);
+    bestScoreEl.textContent = bestScore;
+    bestJumpsEl.textContent = bestJumps;
+
+    const chicken = {
+      x: 120,
+      y: 210,
+      width: 44,
+      height: 44,
+      velocityY: 0,
+      gravity: 0.75,
+      jumpPower: -12,
+      onGround: true
+    };
+
+    const ground = { y: 255, height: 45 };
+    let spikes = [];
+    let frame = 0;
+
+    function showScreen(id) {
+      screens.forEach(screen => screen.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function openGame(id) {
+      showScreen(id);
+      if (id === 'chicken') startGame();
+    }
+
+    function goHome() {
+      gameRunning = false;
+      cancelAnimationFrame(animationId);
+      showScreen('home');
+    }
+
+    function resetGame() {
+      speed = 5;
+      score = 0;
+      jumpCount = 0;
+      frame = 0;
+      spikes = [];
+      chicken.y = 210;
+      chicken.velocityY = 0;
+      chicken.onGround = true;
+      scoreEl.textContent = score;
+      jumpCountEl.textContent = jumpCount;
+    }
+
+    function startGame() {
+      resetGame();
+      gameRunning = true;
+      loop();
+    }
+
+    function jump() {
+      if (!gameRunning) {
+        startGame();
+        return;
+      }
+      if (chicken.onGround) {
+        chicken.velocityY = chicken.jumpPower;
+        chicken.onGround = false;
+        jumpCount++;
+        jumpCountEl.textContent = jumpCount;
+      }
+    }
+
+    function addSpike() {
+      const height = 28 + Math.random() * 30;
+      const width = 24 + Math.random() * 18;
+      spikes.push({ x: canvas.width + 20, y: ground.y - height, width, height, counted: false });
+    }
+
+    function update() {
+      frame++;
+      if (frame % 90 === 0) addSpike();
+      if (frame % 600 === 0) speed += 0.4;
+
+      chicken.velocityY += chicken.gravity;
+      chicken.y += chicken.velocityY;
+
+      if (chicken.y + chicken.height >= ground.y) {
+        chicken.y = ground.y - chicken.height;
+        chicken.velocityY = 0;
+        chicken.onGround = true;
+      }
+
+      spikes.forEach(spike => {
+        spike.x -= speed;
+        if (!spike.counted && spike.x + spike.width < chicken.x) {
+          spike.counted = true;
+          score++;
+          scoreEl.textContent = score;
+          if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem('chickenBest', bestScore);
+            bestScoreEl.textContent = bestScore;
+          }
+        }
+      });
+
+      spikes = spikes.filter(spike => spike.x + spike.width > -20);
+
+      for (const spike of spikes) {
+        if (
+          chicken.x < spike.x + spike.width &&
+          chicken.x + chicken.width > spike.x &&
+          chicken.y < spike.y + spike.height &&
+          chicken.y + chicken.height > spike.y
+        ) {
+          gameOver();
+        }
+      }
+    }
+
+    function drawChicken() {
+      ctx.fillStyle = '#ffd54f';
+      ctx.fillRect(chicken.x, chicken.y, chicken.width, chicken.height);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(chicken.x + 30, chicken.y + 12, 12, 10);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(chicken.x + 42, chicken.y + 18, 10, 6);
+
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(chicken.x + 10, chicken.y + 10, 5, 5);
+
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(chicken.x + 8, chicken.y - 6, 18, 8);
+    }
+
+    function drawSpike(spike) {
+      ctx.fillStyle = '#6b7280';
+      ctx.beginPath();
+      ctx.moveTo(spike.x, ground.y);
+      ctx.lineTo(spike.x + spike.width / 2, spike.y);
+      ctx.lineTo(spike.x + spike.width, ground.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#c7f9ff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#86efac';
+      ctx.fillRect(0, ground.y, canvas.width, ground.height);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '20px Arial';
+      ctx.fillText('Jump over the spikes!', 20, 30);
+
+      drawChicken();
+      spikes.forEach(drawSpike);
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      cancelAnimationFrame(animationId);
+
+      if (jumpCount > bestJumps) {
+        bestJumps = jumpCount;
+        localStorage.setItem('chickenBestJumps', bestJumps);
+        bestJumpsEl.textContent = bestJumps;
+      }
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '36px Arial';
+      ctx.fillText('Game Over', canvas.width / 2 - 100, 110);
+      ctx.font = '24px Arial';
+      ctx.fillText('Score: ' + score, canvas.width / 2 - 45, 155);
+      ctx.fillText('Jumps survived: ' + jumpCount, canvas.width / 2 - 90, 190);
+      ctx.fillText('Press Space, click, or tap to respawn', canvas.width / 2 - 175, 225);
+    }
+
+    function loop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      animationId = requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        jump();
+      }
+    });
+
+    canvas.addEventListener('click', jump);
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      jump();
+    }, { passive: false });
+  </script>
 </body>
 </html>
