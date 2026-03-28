@@ -1732,3 +1732,251 @@
 </body>
 </html>
 \
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chicken Game Hub 🐔</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: monospace;
+    background: repeating-linear-gradient(
+        45deg,
+        #fff8dc,
+        #fff8dc 20px,
+        #f5deb3 20px,
+        #f5deb3 40px
+    );
+    text-align: center;
+}
+
+h1 {
+    font-size: 40px;
+}
+
+/* Game buttons */
+.gameBtn {
+    display: block;
+    margin: 10px auto;
+    padding: 15px;
+    width: 250px;
+    font-size: 18px;
+    background: orange;
+    border: 3px solid black;
+    cursor: pointer;
+}
+
+canvas {
+    border: 4px solid black;
+    background: white;
+}
+
+/* Hide games */
+.gameScreen {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🐔 Chicken Game Hub 🐔</h1>
+
+<div id="menu">
+    <button class="gameBtn" onclick="startGame('dodge')">Play Chicken Dodge</button>
+    <button class="gameBtn" onclick="startGame('run')">Play Chicken Run</button>
+    <button class="gameBtn" onclick="startGame('space')">Play Space Chicken</button>
+    <button class="gameBtn" onclick="startGame('whack')">Play Wacka Fox</button>
+</div>
+
+<canvas id="gameCanvas" width="400" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let currentGame = "";
+let score = 0;
+let record = {
+    dodge: 0,
+    run: 0,
+    space: 0,
+    whack: 0
+};
+
+/* ---------------- DRAWINGS ---------------- */
+
+// Better Chicken
+function drawChicken(x, y) {
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(x, y, 30, 30);
+
+    // beak
+    ctx.fillStyle = "orange";
+    ctx.fillRect(x + 25, y + 10, 10, 10);
+
+    // eye
+    ctx.fillStyle = "black";
+    ctx.fillRect(x + 5, y + 5, 5, 5);
+}
+
+// Fox (actually looks like fox now)
+function drawFox(x, y) {
+    ctx.fillStyle = "orange";
+    ctx.fillRect(x, y, 30, 30);
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(x + 5, y + 10, 10, 10);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(x + 20, y + 5, 5, 5);
+}
+
+// Space Chicken
+function drawSpaceChicken(x, y) {
+    drawChicken(x, y);
+
+    // helmet
+    ctx.strokeStyle = "lightblue";
+    ctx.beginPath();
+    ctx.arc(x + 15, y + 15, 20, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+// Stars
+function drawStar(x, y) {
+    ctx.fillStyle = "white";
+    ctx.fillRect(x, y, 3, 3);
+}
+
+/* ---------------- CONTROLS ---------------- */
+
+let playerX = 180;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") playerX -= 20;
+    if (e.key === "ArrowRight") playerX += 20;
+});
+
+// MOBILE CONTROLS
+canvas.addEventListener("touchstart", e => {
+    let touchX = e.touches[0].clientX;
+    if (touchX < window.innerWidth / 2) {
+        playerX -= 30;
+    } else {
+        playerX += 30;
+    }
+});
+
+/* ---------------- GAME START ---------------- */
+
+function startGame(game) {
+    currentGame = game;
+    score = 0;
+    playerX = 180;
+    loop();
+}
+
+/* ---------------- GAME LOOP ---------------- */
+
+let enemies = [];
+let stars = [];
+
+function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (currentGame === "dodge") dodgeGame();
+    if (currentGame === "run") runGame();
+    if (currentGame === "space") spaceGame();
+    if (currentGame === "whack") whackGame();
+
+    requestAnimationFrame(loop);
+}
+
+/* ---------------- GAMES ---------------- */
+
+// Chicken Dodge
+function dodgeGame() {
+    if (Math.random() < 0.03) {
+        enemies.push({x: Math.random() * 370, y: 0});
+    }
+
+    enemies.forEach(e => {
+        e.y += 5;
+        drawFox(e.x, e.y);
+
+        if (e.y > 450 && Math.abs(e.x - playerX) < 30) {
+            alert("Game Over! Score: " + score);
+            currentGame = "";
+        }
+    });
+
+    drawChicken(playerX, 450);
+    score++;
+}
+
+// Chicken Run (ground game)
+function runGame() {
+    if (Math.random() < 0.03) {
+        enemies.push({x: 400, y: 450});
+    }
+
+    enemies.forEach(e => {
+        e.x -= 5;
+        drawFox(e.x, e.y);
+
+        if (Math.abs(e.x - playerX) < 30) {
+            alert("Game Over! Score: " + score);
+            currentGame = "";
+        }
+    });
+
+    drawChicken(playerX, 450);
+    score++;
+}
+
+// Space Chicken
+function spaceGame() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, 400, 500);
+
+    if (Math.random() < 0.1) {
+        stars.push({x: Math.random()*400, y: 0});
+    }
+
+    stars.forEach(s => {
+        s.y += 2;
+        drawStar(s.x, s.y);
+    });
+
+    drawSpaceChicken(playerX, 400);
+    score++;
+}
+
+// Wacka Fox
+function whackGame() {
+    ctx.fillStyle = "green";
+    ctx.fillRect(0, 0, 400, 500);
+
+    let x = Math.random() * 370;
+    let y = Math.random() * 400;
+
+    drawFox(x, y);
+
+    canvas.onclick = function(e) {
+        let rect = canvas.getBoundingClientRect();
+        let mx = e.clientX - rect.left;
+        let my = e.clientY - rect.top;
+
+        if (mx > x && mx < x+30 && my > y && my < y+30) {
+            score++;
+        }
+    };
+}
+
+</script>
+
+</body>
+</html>
